@@ -2,7 +2,7 @@ import { useState } from 'react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Brain, AlertTriangle, CheckCircle, Clock, Stethoscope, Plus, Trash2, Sparkles, MapPin } from 'lucide-react';
+import { Brain, AlertTriangle, CheckCircle, Clock, Stethoscope, Plus, Trash2, Sparkles, MapPin, HelpCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { aiService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
@@ -18,6 +18,7 @@ const SymptomCheckerPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
   const [existingDiseases, setExistingDiseases] = useState(['']);
   const [medications, setMedications] = useState(['']);
 
@@ -50,33 +51,35 @@ const SymptomCheckerPage = () => {
   };
 
   const onSubmit = async (data) => {
-  setLoading(true);
-  setResult(null);
+    setLoading(true);
+    setResult(null);
+    setError(null);
 
-  try {
-    const response = await aiService.checkSymptoms({
-      ...data,
-      existingDiseases: existingDiseases.filter((d) => d.trim()),
-      currentMedications: medications.filter((m) => m.trim()),
-    });
+    try {
+      const response = await aiService.checkSymptoms({
+        ...data,
+        existingDiseases: existingDiseases.filter((d) => d.trim()),
+        currentMedications: medications.filter((m) => m.trim()),
+      });
 
-    console.log("API Response:", response);
+      setResult(response.data);
 
-    setResult(response.data);
-
-    toast.success("Symptom analysis completed");
-  } catch (error) {
-    console.error("Backend Error:", error);
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      "Failed to analyze symptoms"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+      if (response.data?.aiAnalysis?.needsMoreInfo) {
+        toast.info('Please add more detail so we can analyze your symptoms');
+      } else {
+        toast.success('Symptom analysis completed');
+      }
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to analyze symptoms. Please try again.';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFindDoctors = () => {
     if (!result?.aiAnalysis) return;
@@ -289,7 +292,44 @@ const SymptomCheckerPage = () => {
         </Card>
       )}
 
-      {result && (
+      {error && !loading && (
+        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <div className="flex items-start gap-3 text-red-700 dark:text-red-300">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <div>
+              <h4 className="font-medium">Analysis failed</h4>
+              <p className="mt-1 text-sm">{error}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {result?.aiAnalysis?.needsMoreInfo && (
+        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="flex items-start gap-3">
+            <HelpCircle className="h-6 w-6 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <div>
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                We need a bit more information
+              </h3>
+              <p className="mt-1 text-sm text-blue-800 dark:text-blue-200">
+                Your description was too limited for a reliable analysis. Please answer the
+                following and try again:
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-blue-800 dark:text-blue-200">
+                {(result.aiAnalysis.followUpQuestions?.length
+                  ? result.aiAnalysis.followUpQuestions
+                  : ['When did the symptoms start?', 'How severe are they?', 'Any other symptoms?']
+                ).map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {result && !result.aiAnalysis?.needsMoreInfo && (
         <div className="space-y-4">
           {result.aiAnalysis.emergencyWarning?.isEmergency && (
             <Card className="border-2 border-red-500 bg-red-50 dark:bg-red-900/20">

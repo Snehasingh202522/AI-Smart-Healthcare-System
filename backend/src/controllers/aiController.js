@@ -6,15 +6,81 @@ const { geminiApiKey } = require('../config/env');
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const VALID_SEVERITIES = ['low', 'medium', 'high'];
+
+const parseJsonFromText = (text) => {
+  if (!text) {
+    throw new Error('Empty AI response');
+  }
+
+  // Strip markdown code fences (```json ... ```) if present.
+  const cleaned = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Invalid AI response format');
+    }
+    return JSON.parse(jsonMatch[0]);
+  }
+};
+
+const clampConfidence = (value) => {
+  const num = Number(value);
+  if (Number.isNaN(num)) return 0;
+  return Math.min(1, Math.max(0, num));
+};
+
+// Normalize the raw model output into the shape stored on SymptomHistory.
+const normalizeAnalysis = (raw) => {
+  const needsMoreInfo = raw.needsMoreInfo === true;
+
+  const possibleDiseases = Array.isArray(raw.possibleDiseases)
+    ? raw.possibleDiseases
+        .filter((d) => d && d.name)
+        .slice(0, 5)
+        .map((d) => ({ name: String(d.name), confidence: clampConfidence(d.confidence) }))
+    : [];
+
+  const followUpQuestions = Array.isArray(raw.followUpQuestions)
+    ? raw.followUpQuestions.filter((q) => typeof q === 'string' && q.trim()).slice(0, 5)
+    : [];
+
+  return {
+    needsMoreInfo,
+    followUpQuestions,
+    possibleDiseases,
+    severity: VALID_SEVERITIES.includes(raw.severity) ? raw.severity : 'medium',
+    recommendedSpecialist: raw.recommendedSpecialist || 'General Physician',
+    homeCareAdvice:
+      raw.homeCareAdvice ||
+      (needsMoreInfo
+        ? 'Please provide more detail about your symptoms for an accurate assessment.'
+        : 'Please consult a doctor for proper diagnosis.'),
+    emergencyWarning: {
+      isEmergency: raw.emergencyWarning?.isEmergency === true,
+      message: raw.emergencyWarning?.message || '',
+    },
+  };
+};
+
 const generateSymptomAnalysis = async (symptoms, age, gender, existingDiseases, currentMedications) => {
   if (!geminiApiKey) {
     throw new ApiError(500, 'AI service is not configured. Please contact administrator.');
   }
 
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    generationConfig: {
+      temperature: 0.4,
+      responseMimeType: 'application/json',
+    },
+  });
 
-  const prompt = `You are a medical AI assistant. Analyze the following symptoms and provide a structured medical assessment.
+  const prompt = `You are a medical AI assistant. Analyze the following patient information and return ONLY a JSON object (no markdown, no commentary).
 
 Patient Information:
 - Age: ${age}
@@ -23,44 +89,30 @@ Patient Information:
 - Existing Diseases: ${existingDiseases.length > 0 ? existingDiseases.join(', ') : 'None'}
 - Current Medications: ${currentMedications.length > 0 ? currentMedications.join(', ') : 'None'}
 
-Please provide a JSON response with the following structure:
+Return JSON with exactly this structure:
 {
-  "possibleDiseases": [
-    {
-      "name": "disease name",
-      "confidence": 0.95
-    }
-  ],
-  "severity": "low" or "medium" or "high",
+  "needsMoreInfo": false,
+  "followUpQuestions": ["clarifying question", "..."],
+  "possibleDiseases": [{ "name": "disease name", "confidence": 0.0 }],
+  "severity": "low | medium | high",
   "recommendedSpecialist": "specialist type",
   "homeCareAdvice": "brief home care advice",
-  "emergencyWarning": {
-    "isEmergency": false,
-    "message": ""
-  }
+  "emergencyWarning": { "isEmergency": false, "message": "" }
 }
 
-Important guidelines:
-- Provide only the most likely 3-5 possible diseases
-- Confidence should be between 0 and 1
-- Severity should be based on the urgency of medical attention needed
-- If symptoms indicate a life-threatening condition, set isEmergency to true and provide a clear warning message
-- Keep home care advice practical and concise
-- Return ONLY valid JSON, no additional text`;
+Guidelines:
+- If the symptoms are too vague, generic, or insufficient to reason about (e.g. "not feeling well", a single word, or no real clinical detail), set "needsMoreInfo" to true, provide 2-4 specific "followUpQuestions", and return an empty "possibleDiseases" array.
+- Otherwise set "needsMoreInfo" to false, list the 3-5 most likely diseases with a "confidence" between 0 and 1, and factor in existing diseases and current medications.
+- "severity" reflects how urgently medical attention is needed.
+- If symptoms suggest a life-threatening condition, set "emergencyWarning.isEmergency" to true with a clear message.
+- Keep "homeCareAdvice" practical and concise.
+- Return ONLY valid JSON.`;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-    
-    // Clean the response to extract JSON
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid AI response format');
-    }
-    
-    const analysis = JSON.parse(jsonMatch[0]);
-    return analysis;
+    const raw = parseJsonFromText(response.text());
+    return normalizeAnalysis(raw);
   } catch (error) {
     console.error('Gemini API Error:', error);
     throw new ApiError(500, 'Failed to analyze symptoms. Please try again later.');
@@ -83,6 +135,8 @@ const symptomCheck = asyncHandler(async (req, res) => {
     
     // Return mock data as fallback
     aiAnalysis = {
+      needsMoreInfo: false,
+      followUpQuestions: [],
       possibleDiseases: [
         { name: 'Unable to determine', confidence: 0 },
       ],

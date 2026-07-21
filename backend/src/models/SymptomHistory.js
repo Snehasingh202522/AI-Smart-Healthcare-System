@@ -33,6 +33,14 @@ const symptomHistorySchema = new mongoose.Schema(
       default: [],
     },
     aiAnalysis: {
+      needsMoreInfo: {
+        type: Boolean,
+        default: false,
+      },
+      followUpQuestions: {
+        type: [String],
+        default: [],
+      },
       possibleDiseases: [
         {
           name: String,

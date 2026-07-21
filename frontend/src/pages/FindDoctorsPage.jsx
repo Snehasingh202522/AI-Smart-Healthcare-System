@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { MapPin, Stethoscope, Search, LocateFixed, AlertCircle } from 'lucide-react';
+import { MapPin, Stethoscope, Search, LocateFixed, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { doctorService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
 import Card from '../components/common/Card';
@@ -27,6 +27,8 @@ const FindDoctorsPage = () => {
   const [location, setLocation] = useState(DEFAULT_LOCATION);
   const [matchedSpecializations, setMatchedSpecializations] = useState([]);
   const [error, setError] = useState(null);
+  const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('relevance');
 
   const fetchDoctors = useCallback(async (diseaseList, loc) => {
     if (diseaseList.length === 0) return;
@@ -103,6 +105,24 @@ const FindDoctorsPage = () => {
     setDiseases(diseaseList);
     fetchDoctors(diseaseList, location);
   };
+
+  const visibleDoctors = useMemo(() => {
+    let list =
+      availabilityFilter === 'all'
+        ? doctors
+        : doctors.filter((d) => d.availability === availabilityFilter);
+
+    const sorters = {
+      relevance: (a, b) =>
+        b.specializationMatch - a.specializationMatch || a.distance - b.distance,
+      distance: (a, b) => a.distance - b.distance,
+      rating: (a, b) => b.rating - a.rating,
+      experience: (a, b) => b.experience - a.experience,
+      fee: (a, b) => a.consultationFee - b.consultationFee,
+    };
+
+    return [...list].sort(sorters[sortBy] || sorters.relevance);
+  }, [doctors, availabilityFilter, sortBy]);
 
   const patientLocation = [location.latitude, location.longitude];
 
@@ -197,34 +217,80 @@ const FindDoctorsPage = () => {
       )}
 
       {!loading && doctors.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {doctors.length} Doctor{doctors.length !== 1 ? 's' : ''} Found
-            </h3>
-            <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
-              {doctors.map((doc) => (
-                <DoctorCard
-                  key={doc._id}
-                  doctor={doc}
-                  isSelected={selectedDoctor?._id === doc._id}
-                  onSelect={setSelectedDoctor}
-                />
-              ))}
+        <>
+          <Card>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-500">Availability</label>
+                <select
+                  value={availabilityFilter}
+                  onChange={(e) => setAvailabilityFilter(e.target.value)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  <option value="all">All</option>
+                  <option value="available">Available</option>
+                  <option value="busy">Busy</option>
+                  <option value="offline">Offline</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-500">Sort by</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  <option value="relevance">Best match</option>
+                  <option value="distance">Nearest</option>
+                  <option value="rating">Highest rated</option>
+                  <option value="experience">Most experienced</option>
+                  <option value="fee">Lowest fee</option>
+                </select>
+              </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Map View</h3>
-            <DoctorMap
-              doctors={doctors}
-              patientLocation={patientLocation}
-              selectedDoctor={selectedDoctor}
-              onDoctorSelect={setSelectedDoctor}
-              height="600px"
+          {visibleDoctors.length === 0 ? (
+            <EmptyState
+              icon={MapPin}
+              title="No doctors match your filters"
+              description="Try changing the availability filter."
             />
-          </div>
-        </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {visibleDoctors.length} Doctor{visibleDoctors.length !== 1 ? 's' : ''} Found
+                </h3>
+                <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
+                  {visibleDoctors.map((doc) => (
+                    <DoctorCard
+                      key={doc._id}
+                      doctor={doc}
+                      isSelected={selectedDoctor?._id === doc._id}
+                      onSelect={setSelectedDoctor}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Map View</h3>
+                <DoctorMap
+                  doctors={visibleDoctors}
+                  patientLocation={patientLocation}
+                  selectedDoctor={selectedDoctor}
+                  onDoctorSelect={setSelectedDoctor}
+                  height="600px"
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {!loading && !disease && diseases.length === 0 && (

@@ -1,17 +1,14 @@
+import toast from 'react-hot-toast';
+
 export function useToast() {
-  const toast = {
-    success: (message) => {
-      alert(`✅ ${message}`);
-    },
-
-    error: (message) => {
-      alert(`❌ ${message}`);
-    },
-
-    info: (message) => {
-      alert(`ℹ️ ${message}`);
-    }
+  const api = {
+    success: (message) => toast.success(message),
+    error: (message) => toast.error(message),
+    info: (message) => toast(message),
+    loading: (message) => toast.loading(message),
+    dismiss: (id) => toast.dismiss(id),
   };
 
-  return toast;
+  // Support both `const toast = useToast()` and `const { toast } = useToast()`.
+  return { ...api, toast: api };
 }
