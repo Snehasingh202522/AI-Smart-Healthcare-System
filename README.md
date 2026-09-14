@@ -1,353 +1,198 @@
-# AI Smart Healthcare System
+# 🏥 AI Smart Healthcare System
 
-A production-ready healthcare platform built with the MERN stack, featuring AI-assisted symptom checking, appointment management, prescriptions, and comprehensive doctor-patient workflows.
+> **AI-powered full-stack healthcare platform built with the MERN stack, connecting patients, doctors, and administrators through intelligent healthcare workflows.**
 
-## Tech Stack
+The **AI Smart Healthcare System** is a role-based healthcare platform designed to make healthcare access more intelligent, organized, and convenient.
 
-| Layer | Technologies |
-|-------|-------------|
-| Frontend | React, Tailwind CSS, React Router, Axios, React Hook Form |
-| Backend | Node.js, Express.js |
-| Database | MongoDB, Mongoose |
-| Auth | JWT, bcrypt, Express Validator |
-| AI | Google Gemini AI |
-| Cloud | Cloudinary (configured for file uploads) |
+It combines **AI-assisted symptom analysis, smart doctor recommendations, appointment management, prescriptions, medical reports, notifications, and analytics** into a single full-stack application.
 
-## Prerequisites
+---
 
-- Node.js 18+
-- MongoDB (local or Atlas)
-- npm
-- Google Gemini API Key (for AI features)
+## 🚀 Key Highlights
 
-## Installation
+* 🤖 **AI Symptom Checker** powered by Google Gemini
+* 🩺 **Smart Doctor Recommendation** based on specialization and location
+* 📅 **Online Appointment Booking & Management**
+* 👨‍⚕️ **Doctor Verification Workflow**
+* 💊 **Digital Prescription Management**
+* 📄 **Medical Report Management**
+* 🔔 **Real-time Notifications**
+* 📊 **Role-based Analytics Dashboards**
+* 🔐 **JWT Authentication & Role-Based Authorization**
+* 🧑‍⚕️ **Patient, Doctor & Admin Workflows**
+* 📍 **Location-aware healthcare discovery**
+* 📱 Responsive modern healthcare UI
 
-### 1. Clone and install dependencies
+---
 
-```bash
-# Backend
-cd backend
-npm install
-cp .env.example .env
-# Edit .env with your MongoDB URI, JWT secret, and Gemini API key
+## 👥 User Roles
 
-# Frontend
-cd ../frontend
-npm install
-cp .env.example .env
+### 👤 Patient
+
+Patients can:
+
+* Register and securely log in
+* Analyze symptoms using AI
+* View AI-generated preliminary health insights
+* Find doctors by specialization and location
+* View verified doctors
+* Book appointments
+* Track appointment status
+* View prescriptions
+* Upload and manage medical reports
+* Track symptom history
+* Receive notifications
+* View wellness-related insights
+
+### 👨‍⚕️ Doctor
+
+Doctors can:
+
+* Register and manage their profile
+* Wait for admin verification
+* View appointment requests
+* Confirm, schedule, complete, reject or cancel appointments
+* View patient information
+* Create prescriptions
+* View patient medical history and reports
+* Manage schedules
+* View practice analytics
+* Receive appointment notifications
+
+### 🛡️ Admin
+
+Administrators can:
+
+* View system analytics
+* Manage users
+* Verify doctor applications
+* Approve or reject doctors
+* Activate/deactivate accounts
+* Monitor appointment-related activity
+* Manage system notifications
+* Update administrator settings
+
+---
+
+# 🤖 AI Features
+
+## AI Symptom Checker
+
+Patients can enter their symptoms and receive a **preliminary AI-assisted assessment**.
+
+The system can:
+
+1. Accept reported symptoms
+2. Ask relevant follow-up questions
+3. Analyze the provided information using Google Gemini
+4. Generate possible health insights
+5. Provide general recommendations
+6. Store symptom history for future reference
+
+> ⚠️ AI-generated results are informational only and are **not a medical diagnosis**.
+
+---
+
+# 🩺 Smart Doctor Recommendation
+
+The platform helps patients discover suitable doctors using:
+
+* Medical specialization
+* Patient location
+* Doctor location
+* Verified doctor status
+* Availability information
+
+The system combines registered doctors with location-aware healthcare discovery to make doctor selection easier.
+
+---
+
+# 📅 Appointment Management
+
+The complete appointment lifecycle is supported:
+
+```text
+Patient
+   ↓
+Select Verified Doctor
+   ↓
+Choose Date & Time
+   ↓
+Book Appointment
+   ↓
+Doctor Receives Notification
+   ↓
+Doctor Confirms / Rejects / Schedules
+   ↓
+Patient Receives Notification
+   ↓
+Appointment Completed
 ```
 
-### 2. Configure Environment Variables
+Supported appointment statuses include:
 
-#### Backend (`backend/.env`)
+* Pending
+* Confirmed
+* Scheduled
+* Completed
+* Cancelled
+* Rejected
+* No-show
 
-```env
-PORT=5000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/healthcare_db
-JWT_SECRET=your_super_secret_jwt_key_change_in_production
-JWT_EXPIRE=7d
-JWT_RESET_EXPIRE=15m
-CLIENT_URL=http://localhost:5173
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=
-EMAIL_PASS=
-GEMINI_API_KEY=your_gemini_api_key_here
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+---
+
+# 💊 Prescription Management
+
+Doctors can create digital prescriptions for patients.
+
+Prescription workflow:
+
+```text
+Doctor
+   ↓
+Select Patient
+   ↓
+Enter Diagnosis
+   ↓
+Add Medicines
+   ↓
+Save Prescription
+   ↓
+Patient Receives Notification
 ```
 
-#### Frontend (`frontend/.env`)
+Patients can then securely access their prescriptions from their dashboard.
 
-```env
-VITE_API_URL=http://localhost:5000/api
-```
+---
 
-### 3. Seed Demo Accounts
+# 🔔 Notification System
 
-```bash
-cd backend
-npm run seed:demo
-```
+The system provides role-based notifications for important healthcare events.
 
-This creates demo accounts:
-- **Patient**: `demo.patient@healthcare-ai.demo` / `Demo123456`
-- **Doctor**: `demo.doctor@healthcare-ai.demo` / `Demo123456`
+Examples include:
 
-### 4. Start MongoDB
+* New appointment request
+* Appointment confirmation
+* Appointment scheduling
+* Appointment rejection
+* Appointment cancellation
+* Appointment completion
+* New prescription
+* Doctor verification-related events
 
-Ensure MongoDB is running locally on `mongodb://localhost:27017` or update `MONGODB_URI` in backend `.env`.
+---
 
-### 5. Run the application
+# 📊 Analytics
 
-```bash
-# Terminal 1 - Backend (port 5000)
-cd backend
-npm run dev
+The application provides analytics dashboards according to user role.
 
-# Terminal 2 - Frontend (port 5173)
-cd frontend
-npm run dev
-```
+### Patient Analytics
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+* Health-related insights
+* Symptom patterns
+* Appointment information
+* Wellness observations
 
-## Demo Testing Guide
+### Doctor Analytics
 
-### Demo Accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Patient | demo.patient@healthcare-ai.demo | Demo123456 |
-| Doctor | demo.doctor@healthcare-ai.demo | Demo123456 |
-
-### End-to-End Test Sequence
-
-#### 1. Patient Flow
-
-1. **Login as Demo Patient**
-   - Use the "Demo Patient" button on the login page
-   - Enter credentials manually if needed
-
-2. **AI Symptom Checker**
-   - Navigate to AI Symptom Checker
-   - Enter symptoms (e.g., "headache for 3 days, mild pain")
-   - Answer follow-up questions if prompted
-   - Review AI assessment and recommendations
-
-3. **Find Doctors**
-   - Navigate to Find Doctors
-   - Search by specialization or location
-   - View verified doctors (demo doctor should appear)
-
-4. **Book Appointment**
-   - Select a doctor from the list
-   - Choose date and time (must be in the future)
-   - Provide reason for visit
-   - Confirm booking
-
-5. **View Appointments**
-   - Check Appointments page
-   - Verify appointment appears with correct status
-
-6. **Wait for Doctor Confirmation**
-   - Doctor will receive notification
-   - Doctor can confirm/schedule appointment
-   - Patient receives notification upon confirmation
-
-#### 2. Doctor Flow
-
-1. **Login as Demo Doctor**
-   - Use the "Demo Doctor" button on the login page
-   - Enter credentials manually if needed
-
-2. **View Dashboard**
-   - Check today's appointments
-   - View pending appointment requests
-   - Check notifications
-
-3. **Manage Appointments**
-   - Review patient appointment request
-   - Confirm or schedule appointment
-   - Patient receives notification
-
-4. **Create Prescription**
-   - Navigate to Prescriptions
-   - Select patient from appointments
-   - Enter diagnosis and medicines
-   - Save prescription
-   - Patient receives notification
-
-5. **View Analytics**
-   - Check practice analytics
-   - Review appointment statistics
-   - View patient trends
-
-#### 3. Admin Verification Flow
-
-1. **Login as Admin**
-   - Use admin credentials (not included in demo)
-   - Navigate to Admin Dashboard
-
-2. **Verify Doctors**
-   - View unverified doctors
-   - Review doctor profiles
-   - Approve or reject doctor applications
-   - Only verified doctors appear in Find Doctors
-
-### API Endpoints
-
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| GET | `/api/health` | No | — | Health check |
-| POST | `/api/auth/register` | No | — | Register user |
-| POST | `/api/auth/login` | No | — | Login |
-| POST | `/api/auth/logout` | Yes | Any | Logout |
-| GET | `/api/auth/me` | Yes | Any | Current user |
-| POST | `/api/auth/forgot-password` | No | — | Send reset email |
-| PUT | `/api/auth/reset-password/:token` | No | — | Reset password |
-| GET | `/api/users/profile` | Yes | Any | Get profile |
-| PUT | `/api/users/profile` | Yes | Any | Update profile |
-| GET | `/api/dashboard/patient` | Yes | patient | Patient dashboard |
-| GET | `/api/dashboard/doctor` | Yes | doctor | Doctor dashboard |
-| GET | `/api/dashboard/admin` | Yes | admin | Admin dashboard |
-| POST | `/api/appointments` | Yes | patient | Book appointment |
-| GET | `/api/appointments/patient` | Yes | patient | Patient appointments |
-| GET | `/api/appointments/doctor` | Yes | doctor | Doctor appointments |
-| PATCH | `/api/appointments/:id/status` | Yes | doctor | Update appointment status |
-| POST | `/api/ai/symptom-check` | Yes | patient | AI symptom analysis |
-| GET | `/api/ai/history` | Yes | patient | Symptom history |
-| POST | `/api/prescriptions` | Yes | doctor | Create prescription |
-| GET | `/api/prescriptions/patient` | Yes | patient | Patient prescriptions |
-| GET | `/api/prescriptions/doctor` | Yes | doctor | Doctor prescriptions |
-| GET | `/api/doctors` | Yes | patient, admin | List verified doctors |
-| POST | `/api/doctors/recommend` | Yes | patient | Get doctor recommendations |
-| GET | `/api/notifications` | Yes | Any | Get notifications |
-| POST | `/api/admin/doctors/:doctorId/verify` | Yes | admin | Verify doctor |
-| GET | `/api/admin/doctors/unverified` | Yes | admin | Get unverified doctors |
-
-### Standard Response Format
-
-```json
-{
-  "success": true,
-  "message": "Success message",
-  "data": {}
-}
-```
-
-## User Roles
-
-| Role | Dashboard Route | Access |
-|------|----------------|--------|
-| Patient | `/patient/dashboard` | Symptom checker, appointments, prescriptions, medical reports, health score |
-| Doctor | `/doctor/dashboard` | Appointments, prescriptions, schedule, analytics, notifications |
-| Admin | `/admin/dashboard` | User management, doctor verification, system analytics |
-
-## Features
-
-### Patient Features
-- ✅ AI-assisted preliminary symptom assessment with follow-up questions
-- ✅ Find doctors by specialization and location
-- ✅ Book appointments with verified doctors
-- ✅ View appointment history and status
-- ✅ Access prescriptions from doctors
-- ✅ Upload and manage medical reports
-- ✅ Wellness score based on health data
-- ✅ Symptom history tracking
-- ✅ Real-time notifications
-
-### Doctor Features
-- ✅ View and manage appointments
-- ✅ Confirm/schedule/cancel appointments
-- ✅ Create and manage prescriptions
-- ✅ View patient history and reports
-- ✅ Analytics and practice insights
-- ✅ Schedule management
-- ✅ Real-time notifications
-- ✅ Profile management
-
-### Admin Features
-- ✅ Verify/reject doctor applications
-- ✅ Manage user accounts
-- ✅ View system analytics
-- ✅ User activation/deactivation
-
-### Security Features
-- ✅ JWT authentication
-- ✅ Role-based authorization
-- ✅ Resource-level authorization
-- ✅ Password hashing with bcrypt
-- ✅ Input validation
-- ✅ Protected routes
-
-## Important Medical Disclaimer
-
-**The AI Symptom Checker provides preliminary health assessments for informational purposes only and should not replace professional medical advice, diagnosis, or treatment. Always consult with qualified healthcare professionals for medical concerns.**
-
-The Wellness Score is an indicator based on available health data and is not a medical diagnosis.
-
-## Deployment
-
-### Production Environment Variables
-
-Ensure these are set in your production environment:
-
-```env
-NODE_ENV=production
-MONGODB_URI=your_production_mongodb_uri
-JWT_SECRET=strong_random_secret
-CLIENT_URL=your_production_frontend_url
-GEMINI_API_KEY=your_gemini_api_key
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-```
-
-### Production Build
-
-```bash
-# Frontend production build
-cd frontend
-npm run build
-
-# Backend production start
-cd backend
-npm start
-```
-
-### Deployment Considerations
-
-- Use MongoDB Atlas for production database
-- Configure proper CORS for production domain
-- Use environment-specific configuration
-- Enable HTTPS for production
-- Implement proper error logging
-- Set up monitoring and alerting
-- Use proper secret management (never commit secrets to git)
-
-## Scripts
-
-| Command | Location | Description |
-|---------|----------|-------------|
-| `npm run dev` | backend | Start API with nodemon |
-| `npm start` | backend | Start API (production) |
-| `npm run seed:doctors` | backend | Seed sample doctors |
-| `npm run seed:demo` | backend | Seed demo accounts |
-| `npm run dev` | frontend | Start Vite dev server |
-| `npm run build` | frontend | Production build |
-
-## Project Structure
-
-```
-ai-smart-healthcare-system/
-├── backend/
-│   └── src/
-│       ├── config/          # DB, env, Cloudinary
-│       ├── controllers/     # Route handlers
-│       ├── middleware/      # Auth, roles, validation, errors
-│       ├── models/          # User, Patient, Doctor, Admin, Appointment, Prescription, etc.
-│       ├── routes/          # API routes
-│       ├── scripts/         # Seed scripts
-│       ├── services/        # Business logic
-│       ├── validators/      # Request validation
-│       └── utils/           # Helpers, ApiResponse, ApiError
-├── frontend/
-│   └── src/
-│       ├── assets/
-│       ├── components/      # common, auth, landing, dashboard
-│       ├── context/         # Auth, Theme
-│       ├── hooks/
-│       ├── layouts/
-│       ├── pages/           # Landing, auth, dashboards
-│       ├── services/        # API clients
-│       └── utils/
-└── README.md
-```
-
-## License
-
-ISC
+* App
