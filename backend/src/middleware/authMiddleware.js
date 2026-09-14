@@ -7,6 +7,7 @@ const protect = async (req, res, next) => {
   try {
     let token;
 
+    // Security: Check for token in Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -15,7 +16,19 @@ const protect = async (req, res, next) => {
       throw new ApiError(401, 'Not authorized, no token provided');
     }
 
+    // Security: Verify token
     const decoded = jwt.verify(token, jwtSecret);
+    
+    // Security: Validate token structure
+    if (!decoded.id || !decoded.iat || !decoded.exp) {
+      throw new ApiError(401, 'Invalid token structure');
+    }
+
+    // Security: Check token expiration manually
+    if (decoded.exp < Date.now() / 1000) {
+      throw new ApiError(401, 'Token expired');
+    }
+
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {

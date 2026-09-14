@@ -10,14 +10,33 @@ const healthRoutes = require('./routes/healthRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const medicalReportRoutes = require('./routes/medicalReportRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const doctorRecommendationRoutes = require('./routes/doctorRecommendationRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+const { clientUrl } = require('./config/env');
 
 const app = express();
 
-// ✅ Allow multiple frontend ports
+const allowedOrigins = [
+  clientUrl,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+].filter(Boolean);
+
+// ✅ Allow multiple frontend ports and configured client URL
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive in dev mode for flexibility
+      }
+    },
     credentials: true,
   })
 );
@@ -32,6 +51,8 @@ app.get('/', (req, res) => {
     message: 'Welcome to HealthCare AI API',
     version: '1.0.0',
     docs: '/api/health',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -42,7 +63,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/medical-reports', medicalReportRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/doctor-recommendation', doctorRecommendationRoutes);
 app.use('/api/doctors', doctorRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

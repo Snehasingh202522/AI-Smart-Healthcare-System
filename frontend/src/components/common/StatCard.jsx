@@ -1,16 +1,20 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import Card from './Card';
 
-const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'primary' }) => {
+const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'primary', onClick, clickable = false }) => {
   const colors = {
-    primary: 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400',
-    accent: 'bg-accent-50 text-accent-600 dark:bg-accent-900/20 dark:text-accent-400',
+    primary: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+    accent: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
     warning: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400',
     danger: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+    info: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
   };
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card 
+      className={`relative overflow-hidden ${clickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>

@@ -10,6 +10,14 @@ const formatDoctorResponse = (doctor, distance, specializationMatch) => {
 
   return {
     _id: doctor._id,
+    user: user ? {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+    } : null,
     name: user ? `${user.firstName} ${user.lastName}` : 'Unknown Doctor',
     email: user?.email || '',
     phone: user?.phone || '',

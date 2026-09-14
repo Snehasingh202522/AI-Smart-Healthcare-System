@@ -1,313 +1,754 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { MapPin, Stethoscope, Search, LocateFixed, AlertCircle, SlidersHorizontal } from 'lucide-react';
-import { doctorService } from '../services/authService';
-import { useToast } from '../hooks/useToast';
-import Card from '../components/common/Card';
-import Button from '../components/common/Button';
-import Spinner from '../components/common/Spinner';
-import EmptyState from '../components/common/EmptyState';
-import DoctorCard from '../components/doctors/DoctorCard';
-import DoctorMap from '../components/doctors/DoctorMap';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
+import {
+  MapPin,
+  Stethoscope,
+  Search,
+  LocateFixed,
+  AlertCircle,
+  SlidersHorizontal,
+} from "lucide-react";
 
-const DEFAULT_LOCATION = { latitude: 19.076, longitude: 72.8777, city: 'Mumbai' };
+import { doctorRecommendationService } from "../services/authService";
+import { useToast } from "../hooks/useToast";
+import Card from "../components/common/Card";
+import Spinner from "../components/common/Spinner";
+import EmptyState from "../components/common/EmptyState";
+import DoctorCard from "../components/doctors/DoctorCard";
+import DoctorMap from "../components/doctors/DoctorMap";
 
 const FindDoctorsPage = () => {
   const [searchParams] = useSearchParams();
+  const { state } = useLocation();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [disease, setDisease] = useState(searchParams.get('disease') || '');
-  const [diseases, setDiseases] = useState(
-    searchParams.get('diseases') ? searchParams.get('diseases').split(',') : []
+  const [error, setError] = useState("");
+  const [sortBy, setSortBy] = useState("distance");
+
+  const [specialist, setSpecialist] = useState(
+    state?.specialist || searchParams.get("specialist") || ""
   );
-  const [location, setLocation] = useState(DEFAULT_LOCATION);
-  const [matchedSpecializations, setMatchedSpecializations] = useState([]);
-  const [error, setError] = useState(null);
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('relevance');
 
-  const fetchDoctors = useCallback(async (diseaseList, loc) => {
-    if (diseaseList.length === 0) return;
+  const [location, setLocation] = useState({
+    city: state?.city || "",
+    latitude: null,
+    longitude: null,
+  });
 
-    setLoading(true);
-    setError(null);
+  // ---------------------------------------------------------
+  // Get coordinates from city
+  // ---------------------------------------------------------
 
-    try {
-      const response = await doctorService.recommendDoctors({
-        diseases: diseaseList,
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        city: loc.city,
-        limit: 15,
-      });
+  const getCoordinatesFromCity = async (city) => {
+    const cleanCity = city.trim();
 
-      setDoctors(response.data.doctors);
-      setMatchedSpecializations(response.data.matchedSpecializations || []);
-      if (response.data.doctors.length > 0) {
-        setSelectedDoctor(response.data.doctors[0]);
-      }
-    } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch doctor recommendations';
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
+    if (!cleanCity) {
+      throw new Error("Please enter a city");
     }
-  }, [toast]);
+
+    const url =
+      `https://nominatim.openstreetmap.org/search?` +
+      `format=jsonv2&limit=1&countrycodes=in&` +
+      `q=${encodeURIComponent(cleanCity + ", India")}`;
+
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Unable to find city");
+    }
+
+    const data = await res.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error(`City "${cleanCity}" not found`);
+    }
+
+    return {
+      latitude: Number(data[0].lat),
+      longitude: Number(data[0].lon),
+    };
+  };
+
+  // ---------------------------------------------------------
+  // Extract doctors from API response
+  // ---------------------------------------------------------
+
+  const extractDoctors = (response) => {
+    if (!response) {
+      return [];
+    }
+
+    const data = response?.data ?? response;
+
+    // Backend response:
+    // {
+    //   success: true,
+    //   data: {
+    //     registeredDoctors: [],
+    //     externalCenters: []
+    //   }
+    // }
+
+    if (Array.isArray(data?.registeredDoctors)) {
+      const registered = data.registeredDoctors || [];
+
+      const external = Array.isArray(data?.externalCenters)
+        ? data.externalCenters
+        : [];
+
+      return [...registered, ...external];
+    }
+
+    if (Array.isArray(data?.doctors)) {
+      return data.doctors;
+    }
+
+    if (Array.isArray(data?.externalCenters)) {
+      return data.externalCenters;
+    }
+
+    if (Array.isArray(data?.healthcareCenters)) {
+      return data.healthcareCenters;
+    }
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    return [];
+  };
+
+  // ---------------------------------------------------------
+  // Fetch doctors
+  // ---------------------------------------------------------
+
+  const fetchDoctors = useCallback(
+    async (spec, loc) => {
+      setLoading(true);
+      setError("");
+
+      try {
+        let finalLocation = {
+          city: loc?.city || "",
+          latitude: loc?.latitude ?? null,
+          longitude: loc?.longitude ?? null,
+        };
+
+        // If city exists but coordinates don't,
+        // convert city into coordinates first.
+        if (
+          finalLocation.city.trim() &&
+          (!Number.isFinite(finalLocation.latitude) ||
+            !Number.isFinite(finalLocation.longitude))
+        ) {
+          const coords = await getCoordinatesFromCity(
+            finalLocation.city
+          );
+
+          finalLocation = {
+            ...finalLocation,
+            ...coords,
+          };
+
+          setLocation(finalLocation);
+        }
+
+        // Backend needs either city OR coordinates.
+        if (
+          !finalLocation.city.trim() &&
+          (!Number.isFinite(finalLocation.latitude) ||
+            !Number.isFinite(finalLocation.longitude))
+        ) {
+          throw new Error(
+            "Please enter a city or use your current location."
+          );
+        }
+
+        // Backend expects:
+        // city, specialist, latitude, longitude, radius
+        const payload = {
+          city: finalLocation.city.trim(),
+          specialist: spec.trim(),
+          latitude: finalLocation.latitude,
+          longitude: finalLocation.longitude,
+          radius: 25,
+        };
+
+        console.log("SEARCH PAYLOAD:", payload);
+
+        const response =
+          await doctorRecommendationService.searchDoctors(
+            payload
+          );
+
+        console.log("FULL RESPONSE:", response);
+
+        const doctorList = extractDoctors(response);
+
+        console.log("FOUND DOCTORS:", doctorList);
+
+        setDoctors(doctorList);
+        setSelectedDoctor(doctorList[0] || null);
+      } catch (err) {
+        console.error("Find doctors error:", err);
+
+        let message = "Failed to fetch doctors";
+
+        if (err?.response?.data?.message) {
+          message = err.response.data.message;
+        } else if (err?.message) {
+          message = err.message;
+        } else if (err?.code === "ERR_NETWORK") {
+          message =
+            "Network error. Please check your connection and try again.";
+        } else if (err?.code === "ECONNABORTED") {
+          message = "Request timed out. Please try again.";
+        }
+
+        setDoctors([]);
+        setSelectedDoctor(null);
+        setError(message);
+
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast]
+  );
+
+  // ---------------------------------------------------------
+  // Detect current location
+  // ---------------------------------------------------------
 
   const detectLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
+      toast.error(
+        "Geolocation is not supported by your browser."
+      );
       return;
     }
 
     setLocationLoading(true);
+    setError("");
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation((prev) => ({
-          ...prev,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }));
-        setLocationLoading(false);
-        toast.success('Location detected successfully');
+      async (position) => {
+        try {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          let city = "";
+
+          try {
+            const url =
+              `https://nominatim.openstreetmap.org/reverse?` +
+              `format=jsonv2&lat=${latitude}&lon=${longitude}`;
+
+            const res = await fetch(url, {
+              headers: {
+                Accept: "application/json",
+              },
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+
+              city =
+                data?.address?.city ||
+                data?.address?.town ||
+                data?.address?.municipality ||
+                data?.address?.village ||
+                data?.address?.state_district ||
+                data?.address?.state ||
+                "";
+            }
+          } catch (reverseError) {
+            console.warn(
+              "Reverse geocoding failed:",
+              reverseError.message
+            );
+          }
+
+          const detectedLocation = {
+            city,
+            latitude,
+            longitude,
+          };
+
+          setLocation(detectedLocation);
+
+          toast.success(
+            city
+              ? `Location detected: ${city}`
+              : "Location detected"
+          );
+
+          // Automatically search after location detection
+          await fetchDoctors(
+            specialist,
+            detectedLocation
+          );
+        } catch (error) {
+          console.error(
+            "Location detection error:",
+            error
+          );
+
+          toast.error(
+            "Location detected, but doctor search failed."
+          );
+        } finally {
+          setLocationLoading(false);
+        }
       },
-      () => {
+      (geoError) => {
+        console.error(
+          "Geolocation error:",
+          geoError
+        );
+
         setLocationLoading(false);
-        toast.error('Unable to detect location. Using default location.');
+
+        if (geoError.code === 1) {
+          toast.error(
+            "Location permission denied. Please allow location access."
+          );
+        } else if (geoError.code === 2) {
+          toast.error(
+            "Unable to determine your location."
+          );
+        } else {
+          toast.error(
+            "Location detection timed out. Please enter your city manually."
+          );
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000,
+      }
     );
-  }, [toast]);
+  }, [fetchDoctors, specialist, toast]);
+
+  // ---------------------------------------------------------
+  // Search when opened from another page
+  // ---------------------------------------------------------
 
   useEffect(() => {
-    detectLocation();
-  }, [detectLocation]);
+    if (state?.city) {
+      const initialLocation = {
+        city: state.city,
+        latitude: null,
+        longitude: null,
+      };
 
-  useEffect(() => {
-    const diseaseList = diseases.length > 0 ? diseases : disease ? [disease] : [];
-    if (diseaseList.length > 0 && location.latitude && location.longitude) {
-      fetchDoctors(diseaseList, location);
+      fetchDoctors(specialist, initialLocation);
     }
-  }, [diseases, disease, location, fetchDoctors]);
+  }, [state?.city]);
 
-  const handleSearch = (e) => {
+  // ---------------------------------------------------------
+  // Manual search
+  // ---------------------------------------------------------
+
+  const handleSearch = async (e) => {
     e.preventDefault();
-    const diseaseList = disease.trim() ? [disease.trim()] : [];
-    if (diseaseList.length === 0) {
-      toast.error('Please enter a disease or condition');
+
+    const city = location.city.trim();
+
+    if (!city) {
+      toast.error(
+        "Please enter a city or click Use My Location."
+      );
       return;
     }
-    setDiseases(diseaseList);
-    fetchDoctors(diseaseList, location);
+
+    await fetchDoctors(specialist, {
+      city,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
   };
 
-  const visibleDoctors = useMemo(() => {
-    let list =
-      availabilityFilter === 'all'
-        ? doctors
-        : doctors.filter((d) => d.availability === availabilityFilter);
+  // ---------------------------------------------------------
+  // Sorting
+  // ---------------------------------------------------------
 
+  const visibleDoctors = useMemo(() => {
     const sorters = {
-      relevance: (a, b) =>
-        b.specializationMatch - a.specializationMatch || a.distance - b.distance,
-      distance: (a, b) => a.distance - b.distance,
-      rating: (a, b) => b.rating - a.rating,
-      experience: (a, b) => b.experience - a.experience,
-      fee: (a, b) => a.consultationFee - b.consultationFee,
+      distance: (a, b) =>
+        Number(a.distance || 0) -
+        Number(b.distance || 0),
+
+      rating: (a, b) =>
+        Number(b.rating?.average || 0) -
+        Number(a.rating?.average || 0),
+
+      experience: (a, b) =>
+        Number(b.experience || 0) -
+        Number(a.experience || 0),
+
+      fee: (a, b) =>
+        (a.consultationFee ?? Infinity) -
+        (b.consultationFee ?? Infinity),
     };
 
-    return [...list].sort(sorters[sortBy] || sorters.relevance);
-  }, [doctors, availabilityFilter, sortBy]);
+    return [...doctors].sort(
+      sorters[sortBy] || sorters.distance
+    );
+  }, [doctors, sortBy]);
 
-  const patientLocation = [location.latitude, location.longitude];
+  // ---------------------------------------------------------
+  // Patient location for map
+  // ---------------------------------------------------------
+
+  const patientLocation =
+    Number.isFinite(location.latitude) &&
+    Number.isFinite(location.longitude)
+      ? [location.latitude, location.longitude]
+      : null;
+
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+
       <div>
-        <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="flex items-center gap-2 text-2xl font-bold">
           <Stethoscope className="h-8 w-8 text-primary-600" />
           Find Doctors
         </h2>
-        <p className="mt-1 text-gray-500">
-          AI-powered location-based doctor recommendations near you
+
+        <p className="text-gray-500">
+          AI-powered location-based doctor recommendations
         </p>
       </div>
 
+      {/* Search */}
+
       <Card>
-        <form onSubmit={handleSearch} className="space-y-4">
+        <form
+          onSubmit={handleSearch}
+          className="space-y-4"
+        >
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Specialist */}
+
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Disease / Condition
+              <label className="mb-2 block text-sm font-medium">
+                Specialist
               </label>
+
               <input
-                type="text"
-                value={disease}
-                onChange={(e) => setDisease(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                placeholder="e.g., Headache, Diabetes, Asthma"
+                value={specialist}
+                onChange={(e) =>
+                  setSpecialist(e.target.value)
+                }
+                placeholder="Cardiologist"
+                className="w-full rounded-lg border px-4 py-2.5"
               />
             </div>
+
+            {/* City */}
+
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="mb-2 block text-sm font-medium">
                 City
               </label>
+
               <input
-                type="text"
                 value={location.city}
-                onChange={(e) => setLocation({ ...location, city: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                placeholder="Your city"
+                onChange={(e) =>
+                  setLocation({
+                    city: e.target.value,
+                    latitude: null,
+                    longitude: null,
+                  })
+                }
+                placeholder="Meerut, Delhi, Mumbai..."
+                className="w-full rounded-lg border px-4 py-2.5"
               />
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" icon={Search} loading={loading}>
-              Find Doctors
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              icon={LocateFixed}
-              loading={locationLoading}
-              onClick={detectLocation}
-            >
-              Use My Location
-            </Button>
-          </div>
+            {/* Search */}
 
-          {matchedSpecializations.length > 0 && (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Recommended specialists: {matchedSpecializations.join(', ')}
-            </p>
-          )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Search className="h-4 w-4" />
+
+              {loading
+                ? "Searching..."
+                : "Find Doctors"}
+            </button>
+
+            {/* Current Location */}
+
+            <button
+              type="button"
+              disabled={locationLoading}
+              onClick={detectLocation}
+              className="inline-flex items-center gap-2 rounded-lg border px-5 py-2 hover:bg-gray-100 disabled:opacity-50"
+            >
+              <LocateFixed className="h-4 w-4" />
+
+              {locationLoading
+                ? "Detecting..."
+                : "Use My Location"}
+            </button>
+          </div>
         </form>
       </Card>
 
+      {/* Loading */}
+
       {loading && (
         <Card>
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="py-10 text-center">
             <Spinner size="lg" />
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Finding best doctors near you...</p>
+
+            <p className="mt-4">
+              Finding doctors near{" "}
+              {location.city || "your location"}...
+            </p>
           </div>
         </Card>
       )}
+
+      {/* Error */}
 
       {error && !loading && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-          <div className="flex items-center gap-3 text-red-700 dark:text-red-300">
-            <AlertCircle className="h-5 w-5 shrink-0" />
-            <p>{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-800">
+                Search Error
+              </h4>
+
+              <p className="text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                fetchDoctors(specialist, location);
+              }}
+              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+            >
+              Retry
+            </button>
           </div>
         </Card>
       )}
 
-      {!loading && !error && doctors.length === 0 && (disease || diseases.length > 0) && (
-        <EmptyState
-          icon={MapPin}
-          title="No doctors found"
-          description="Try adjusting your search criteria or location"
-        />
-      )}
+      {/* Empty */}
 
-      {!loading && doctors.length > 0 && (
-        <>
-          <Card>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+      {!loading &&
+        !error &&
+        visibleDoctors.length === 0 && (
+          <EmptyState
+            icon={MapPin}
+            title="No doctors found"
+            description="Try another city or specialist."
+          />
+        )}
+
+      {/* Results */}
+
+      {!loading &&
+        visibleDoctors.length > 0 && (
+          <>
+            {/* Sort */}
+
+            <Card>
+              <div className="flex items-center gap-3">
                 <SlidersHorizontal className="h-4 w-4" />
-                Filters
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500">Availability</label>
-                <select
-                  value={availabilityFilter}
-                  onChange={(e) => setAvailabilityFilter(e.target.value)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                >
-                  <option value="all">All</option>
-                  <option value="available">Available</option>
-                  <option value="busy">Busy</option>
-                  <option value="offline">Offline</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500">Sort by</label>
+
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  onChange={(e) =>
+                    setSortBy(e.target.value)
+                  }
+                  className="rounded-lg border px-3 py-2"
                 >
-                  <option value="relevance">Best match</option>
-                  <option value="distance">Nearest</option>
-                  <option value="rating">Highest rated</option>
-                  <option value="experience">Most experienced</option>
-                  <option value="fee">Lowest fee</option>
+                  <option value="distance">
+                    Nearest
+                  </option>
+
+                  <option value="rating">
+                    Highest Rated
+                  </option>
+
+                  <option value="experience">
+                    Most Experienced
+                  </option>
+
+                  <option value="fee">
+                    Lowest Fee
+                  </option>
                 </select>
               </div>
+            </Card>
+
+            {/* Results Sections */}
+
+            <div className="space-y-8">
+              {/* Registered Doctors */}
+
+              {(() => {
+                const registeredDoctors =
+                  visibleDoctors.filter(
+                    (doc) =>
+                      doc.source === "registered"
+                  );
+
+                const externalCenters =
+                  visibleDoctors.filter(
+                    (doc) =>
+                      doc.source !== "registered"
+                  );
+
+                return (
+                  <>
+                    {registeredDoctors.length > 0 && (
+                      <section>
+                        <div className="mb-4 flex items-end justify-between gap-3">
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                              Registered Doctors
+                            </h3>
+
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                              Verified doctors registered on HealthCare AI. Online appointment booking is available.
+                            </p>
+                          </div>
+
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            {registeredDoctors.length} available
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                          {registeredDoctors.map(
+                            (doc) => (
+                              <DoctorCard
+                                key={
+                                  doc._id ||
+                                  doc.name
+                                }
+                                doctor={doc}
+                                isSelected={
+                                  selectedDoctor?._id ===
+                                  doc._id
+                                }
+                                onSelect={
+                                  setSelectedDoctor
+                                }
+                              />
+                            )
+                          )}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* External Healthcare Centers */}
+
+                    {externalCenters.length > 0 && (
+                      <section>
+                        <div className="mb-4 flex items-end justify-between gap-3">
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                              Nearby Healthcare Centers
+                            </h3>
+
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                              Hospitals and clinics near your selected/current location. These external places do not support appointment booking through this app.
+                            </p>
+                          </div>
+
+                          <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            {externalCenters.length} nearby
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                          {externalCenters.map(
+                            (doc) => (
+                              <DoctorCard
+                                key={
+                                  doc._id ||
+                                  doc.place_id ||
+                                  doc.name
+                                }
+                                doctor={doc}
+                                isSelected={
+                                  selectedDoctor?._id ===
+                                  doc._id
+                                }
+                                onSelect={
+                                  setSelectedDoctor
+                                }
+                              />
+                            )
+                          )}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Map */}
+
+                    <section>
+                      <div className="mb-4">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                          Location Map
+                        </h3>
+
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          View registered doctors and nearby healthcare centers on the map.
+                        </p>
+                      </div>
+
+                      <DoctorMap
+                        doctors={visibleDoctors}
+                        patientLocation={
+                          patientLocation
+                        }
+                        selectedDoctor={
+                          selectedDoctor
+                        }
+                        onDoctorSelect={
+                          setSelectedDoctor
+                        }
+                        height="500px"
+                      />
+                    </section>
+                  </>
+                );
+              })()}
             </div>
-          </Card>
-
-          {visibleDoctors.length === 0 ? (
-            <EmptyState
-              icon={MapPin}
-              title="No doctors match your filters"
-              description="Try changing the availability filter."
-            />
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {visibleDoctors.length} Doctor{visibleDoctors.length !== 1 ? 's' : ''} Found
-                </h3>
-                <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
-                  {visibleDoctors.map((doc) => (
-                    <DoctorCard
-                      key={doc._id}
-                      doctor={doc}
-                      isSelected={selectedDoctor?._id === doc._id}
-                      onSelect={setSelectedDoctor}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Map View</h3>
-                <DoctorMap
-                  doctors={visibleDoctors}
-                  patientLocation={patientLocation}
-                  selectedDoctor={selectedDoctor}
-                  onDoctorSelect={setSelectedDoctor}
-                  height="600px"
-                />
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {!loading && !disease && diseases.length === 0 && (
-        <Card className="text-center">
-          <MapPin className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
-            Search for doctors
-          </h3>
-          <p className="mt-2 text-gray-500">
-            Enter a disease or use the{' '}
-            <Link to="/patient/symptom-checker" className="text-primary-600 hover:underline">
-              AI Symptom Checker
-            </Link>{' '}
-            to get automatic recommendations.
-          </p>
-        </Card>
-      )}
+          </>
+        )}
     </div>
   );
 };

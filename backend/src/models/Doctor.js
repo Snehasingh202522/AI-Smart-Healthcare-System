@@ -23,10 +23,17 @@ const doctorSchema = new mongoose.Schema(
       min: 0,
     },
     rating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
+      average: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5,
+      },
+      totalReviews: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
     },
     hospital: {
       type: String,
@@ -40,6 +47,25 @@ const doctorSchema = new mongoose.Schema(
     city: {
       type: String,
       trim: true,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number],
+        default: [0, 0],
+      },
+      address: {
+        type: String,
+        trim: true,
+      },
+      pincode: {
+        type: String,
+        trim: true,
+      },
     },
     latitude: {
       type: Number,
@@ -67,6 +93,19 @@ const doctorSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    openingHours: {
+      monday: { open: String, close: String },
+      tuesday: { open: String, close: String },
+      wednesday: { open: String, close: String },
+      thursday: { open: String, close: String },
+      friday: { open: String, close: String },
+      saturday: { open: String, close: String },
+      sunday: { open: String, close: String },
+    },
+    photo: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -76,5 +115,6 @@ const doctorSchema = new mongoose.Schema(
 doctorSchema.index({ specialization: 1 });
 doctorSchema.index({ city: 1 });
 doctorSchema.index({ latitude: 1, longitude: 1 });
+doctorSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Doctor', doctorSchema);

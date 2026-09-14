@@ -6,11 +6,26 @@ const requiredEnv = [
   'GEMINI_API_KEY'
 ];
 
+// Security: Validate required environment variables
 requiredEnv.forEach((key) => {
   if (!process.env[key]) {
-    console.warn(`Warning: ${key} is not set in environment variables`);
+    console.error(`❌ Critical env var missing: ${key}`);
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error(`Missing required environment variable: ${key}`);
+    }
   }
 });
+
+// Security: Warn about weak JWT secret in development
+if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+  console.warn('⚠️  JWT_SECRET should be at least 32 characters for better security');
+}
+
+// Security: Ensure NODE_ENV is set
+if (!process.env.NODE_ENV) {
+  console.warn('⚠️  NODE_ENV not set, defaulting to development');
+  process.env.NODE_ENV = 'development';
+}
 
 module.exports = {
   port: process.env.PORT || 5000,
@@ -50,4 +65,6 @@ module.exports = {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
 };

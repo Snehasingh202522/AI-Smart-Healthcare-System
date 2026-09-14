@@ -1,25 +1,29 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Calendar, Clock, User, Stethoscope, Plus, X, Filter, Search } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { appointmentService } from '../services/authService';
-import { useToast } from '../hooks/useToast';
-import Card from '../components/common/Card';
-import Input from '../components/common/Input';
-import Button from '../components/common/Button';
-import Avatar from '../components/common/Avatar';
-import Spinner from '../components/common/Spinner';
-import Badge from '../components/common/Badge';
-import { formatDateTime } from '../utils/helpers';
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { Calendar, Clock, Plus, X, Filter } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { appointmentService, doctorService } from "../services/authService";
+import { useToast } from "../hooks/useToast";
+import { useLocation } from "react-router-dom";
+import Card from "../components/common/Card";
+import Input from "../components/common/Input";
+import Button from "../components/common/Button";
+import Avatar from "../components/common/Avatar";
+import Spinner from "../components/common/Spinner";
+import Badge from "../components/common/Badge";
+import { formatDateTime } from "../utils/helpers";
 
 const AppointmentsPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
+
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
   const [showBookingForm, setShowBookingForm] = useState(false);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [doctors, setDoctors] = useState([]);
 
   const {
     register,
@@ -28,22 +32,34 @@ const AppointmentsPage = () => {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      doctor: '',
-      date: '',
-      time: '',
-      reason: '',
-      notes: '',
-      priority: 'medium',
+      doctor: "",
+      date: "",
+      time: "",
+      reason: "",
+      notes: "",
+      priority: "medium",
     },
   });
 
+  // ================= FETCH APPOINTMENTS =================
   const fetchAppointments = async () => {
     setLoading(true);
+
     try {
-      const response = await appointmentService.getPatientAppointments({ status: filter !== 'all' ? filter : undefined });
-      setAppointments(response.data.appointments);
+      const status = filter === "all" ? "" : filter;
+
+      const response = await appointmentService.getPatientAppointments(status);
+
+      const appointmentsData =
+        response?.appointments ||
+        [];
+
+      setAppointments(appointmentsData);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to fetch appointments');
+      toast.error(
+        error.response?.data?.message || "Failed to fetch appointments"
+      );
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
@@ -53,67 +69,95 @@ const AppointmentsPage = () => {
     fetchAppointments();
   }, [filter]);
 
+  // ================= LOAD DOCTORS =================
+  useEffect(() => {
+    const loadDoctors = async () => {
+      try {
+        const response = await doctorService.getAllDoctors();
+        const doctorsList = response?.doctors || [];
+        setDoctors(doctorsList);
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message || "Failed to load doctors"
+        );
+      }
+    };
+
+    loadDoctors();
+
+    if (location?.state?.doctorId) {
+      reset({ doctor: location.state.doctorId });
+    }
+  }, [location, reset]);
+
+  // ================= BOOK APPOINTMENT =================
   const onSubmit = async (data) => {
     setBookingLoading(true);
+
     try {
       await appointmentService.createAppointment(data);
-      toast.success('Appointment booked successfully');
+      toast.success("Appointment booked successfully");
+
       reset();
       setShowBookingForm(false);
       fetchAppointments();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to book appointment');
+      toast.error(
+        error.response?.data?.message || "Failed to book appointment"
+      );
     } finally {
       setBookingLoading(false);
     }
   };
 
+  // ================= CANCEL =================
   const handleCancel = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
-    
+    if (!window.confirm("Are you sure you want to cancel this appointment?"))
+      return;
+
     try {
       await appointmentService.cancelAppointment(id);
-      toast.success('Appointment cancelled successfully');
+      toast.success("Appointment cancelled successfully");
       fetchAppointments();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to cancel appointment');
+      toast.error(
+        error.response?.data?.message || "Failed to cancel appointment"
+      );
     }
   };
 
+  // ================= COLORS =================
   const getStatusColor = (status) => {
     switch (status) {
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'no-show':
-        return 'bg-yellow-100 text-yellow-800';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "scheduled":
+        return "bg-blue-100 text-blue-800";
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
+      case "urgent":
+        return "bg-red-100 text-red-800";
+      case "high":
+        return "bg-orange-100 text-orange-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
-
-  const filteredAppointments = appointments.filter((apt) => {
-    if (filter === 'all') return true;
-    return apt.status === filter;
-  });
 
   if (loading) {
     return (
@@ -125,20 +169,30 @@ const AppointmentsPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Appointments</h2>
-          <p className="mt-1 text-gray-500">Manage your medical appointments</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            My Appointments
+          </h2>
+          <p className="mt-1 text-gray-500">
+            Manage your medical appointments
+          </p>
         </div>
+
         <Button onClick={() => setShowBookingForm(true)} icon={Plus}>
           Book Appointment
         </Button>
       </div>
 
+      {/* Booking Form */}
       {showBookingForm && (
         <Card>
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Book New Appointment</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Book New Appointment
+            </h3>
+
             <button
               onClick={() => setShowBookingForm(false)}
               className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -149,20 +203,41 @@ const AppointmentsPage = () => {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="Doctor ID"
-                {...register('doctor', { required: 'Doctor ID is required' })}
-                error={errors.doctor?.message}
-                icon={Stethoscope}
-                placeholder="Enter doctor ID"
-              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Select Doctor
+                </label>
+
+                <select
+                  {...register("doctor", {
+                    required: "Doctor is required",
+                  })}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  <option value="">Select Doctor</option>
+
+                  {doctors.map((doc) => (
+                    <option key={doc._id} value={doc._id}>
+                      Dr. {doc.user?.firstName} {doc.user?.lastName} (
+                      {doc.specialization || "General"})
+                    </option>
+                  ))}
+                </select>
+
+                {errors.doctor && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {errors.doctor.message}
+                  </p>
+                )}
+              </div>
+
               <Input
                 label="Date"
                 type="date"
-                {...register('date', { required: 'Date is required' })}
-                error={errors.date?.message}
                 icon={Calendar}
-                min={new Date().toISOString().split('T')[0]}
+                min={new Date().toISOString().split("T")[0]}
+                {...register("date", { required: "Date is required" })}
+                error={errors.date?.message}
               />
             </div>
 
@@ -170,17 +245,19 @@ const AppointmentsPage = () => {
               <Input
                 label="Time"
                 type="time"
-                {...register('time', { required: 'Time is required' })}
-                error={errors.time?.message}
                 icon={Clock}
+                {...register("time", { required: "Time is required" })}
+                error={errors.time?.message}
               />
+
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Priority
                 </label>
+
                 <select
-                  {...register('priority')}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  {...register("priority")}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -191,24 +268,23 @@ const AppointmentsPage = () => {
             </div>
 
             <Input
-              label="Reason for Visit"
-              {...register('reason', {
-                required: 'Reason is required',
-                minLength: { value: 5, message: 'Reason must be at least 5 characters' },
+              label="Reason"
+              placeholder="Reason for appointment"
+              {...register("reason", {
+                required: "Reason is required",
               })}
               error={errors.reason?.message}
-              placeholder="Describe the reason for your visit"
             />
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Additional Notes (Optional)
+                Notes
               </label>
+
               <textarea
-                {...register('notes')}
                 rows={3}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                placeholder="Any additional information..."
+                {...register("notes")}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
 
@@ -216,7 +292,12 @@ const AppointmentsPage = () => {
               <Button type="submit" loading={bookingLoading}>
                 Book Appointment
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowBookingForm(false)}>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowBookingForm(false)}
+              >
                 Cancel
               </Button>
             </div>
@@ -224,30 +305,38 @@ const AppointmentsPage = () => {
         </Card>
       )}
 
+      {/* Appointments */}
       <Card>
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-gray-400" />
+
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             >
               <option value="all">All Appointments</option>
+              <option value="pending">Pending</option>
               <option value="scheduled">Scheduled</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
+
           <p className="text-sm text-gray-500">
-            {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''}
+            {appointments.length} appointment
+            {appointments.length !== 1 ? "s" : ""}
           </p>
         </div>
 
-        {filteredAppointments.length === 0 ? (
+        {appointments.length === 0 ? (
           <div className="py-12 text-center">
             <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+
             <p className="mt-2 text-gray-500">No appointments found</p>
+
             {!showBookingForm && (
               <Button
                 onClick={() => setShowBookingForm(true)}
@@ -261,7 +350,7 @@ const AppointmentsPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredAppointments.map((appointment) => (
+            {appointments.map((appointment) => (
               <div
                 key={appointment._id}
                 className="flex flex-col gap-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between"
@@ -272,17 +361,24 @@ const AppointmentsPage = () => {
                     lastName={appointment.doctor?.lastName}
                     size="lg"
                   />
+
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white">
-                      Dr. {appointment.doctor?.firstName} {appointment.doctor?.lastName}
+                      Dr. {appointment.doctor?.firstName}{" "}
+                      {appointment.doctor?.lastName}
                     </h4>
-                    <p className="text-sm text-gray-500">{appointment.reason}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
+
+                    <p className="text-sm text-gray-500">
+                      {appointment.reason}
+                    </p>
+
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {formatDateTime(appointment.date)}
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
+
+                      <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {appointment.time}
                       </div>
@@ -293,13 +389,18 @@ const AppointmentsPage = () => {
                 <div className="flex flex-col gap-2 sm:items-end">
                   <div className="flex gap-2">
                     <Badge className={getStatusColor(appointment.status)}>
-                      {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                      {appointment.status.charAt(0).toUpperCase() +
+                        appointment.status.slice(1)}
                     </Badge>
+
                     <Badge className={getPriorityColor(appointment.priority)}>
-                      {appointment.priority.charAt(0).toUpperCase() + appointment.priority.slice(1)}
+                      {appointment.priority.charAt(0).toUpperCase() +
+                        appointment.priority.slice(1)}
                     </Badge>
                   </div>
-                  {appointment.status === 'scheduled' && (
+
+                  {(appointment.status === "pending" ||
+                    appointment.status === "scheduled") && (
                     <Button
                       size="sm"
                       variant="outline"

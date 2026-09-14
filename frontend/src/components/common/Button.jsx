@@ -10,15 +10,17 @@ const Button = ({
 }) => {
   const variants = {
     primary:
-      'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-600',
+      'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600',
     secondary:
-      'bg-white text-primary-600 border border-primary-600 hover:bg-primary-50 dark:bg-gray-800 dark:text-primary-400 dark:border-primary-400 dark:hover:bg-gray-700',
+      'bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-gray-700',
     accent:
-      'bg-accent-500 text-white hover:bg-accent-600 focus:ring-accent-500',
+      'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500',
     ghost:
       'bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
     danger:
       'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+    outline:
+      'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700',
   };
 
   const sizes = {

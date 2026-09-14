@@ -41,6 +41,17 @@ const symptomHistorySchema = new mongoose.Schema(
         type: [String],
         default: [],
       },
+      askedQuestions: {
+        type: [String],
+        default: [],
+      },
+      conversationContext: {
+        type: [{
+          question: String,
+          answer: String,
+        }],
+        default: [],
+      },
       possibleDiseases: [
         {
           name: String,

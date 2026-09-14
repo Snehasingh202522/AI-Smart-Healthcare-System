@@ -12,6 +12,18 @@ const appointmentSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    doctorName: {
+      type: String,
+      required: [true, 'Doctor name is required'],
+    },
+    hospital: {
+      type: String,
+      required: [true, 'Hospital is required'],
+    },
+    specialization: {
+      type: String,
+      required: [true, 'Specialization is required'],
+    },
     date: {
       type: Date,
       required: [true, 'Appointment date is required'],
@@ -21,10 +33,10 @@ const appointmentSchema = new mongoose.Schema(
       required: [true, 'Appointment time is required'],
     },
     status: {
-      type: String,
-      enum: ['scheduled', 'completed', 'cancelled', 'no-show'],
-      default: 'scheduled',
-    },
+    type: String,
+    enum: ['pending', 'confirmed', 'scheduled', 'completed', 'cancelled', 'rejected', 'no-show'],
+    default: 'pending',
+  },
     reason: {
       type: String,
       required: [true, 'Appointment reason is required'],
@@ -60,7 +72,7 @@ appointmentSchema.index({ doctor: 1, date: 1 });
 appointmentSchema.index({ status: 1, date: 1 });
 
 appointmentSchema.methods.isUpcoming = function () {
-  return this.status === 'scheduled' && new Date(this.date) >= new Date();
+  return ['pending', 'confirmed', 'scheduled'].includes(this.status) && new Date(this.date) >= new Date();
 };
 
 appointmentSchema.methods.isPast = function () {

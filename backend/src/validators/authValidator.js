@@ -26,7 +26,7 @@ const registerValidator = [
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain uppercase, lowercase, and a number'),
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   body('role')
     .notEmpty()
     .withMessage('Role is required')
@@ -67,7 +67,7 @@ const resetPasswordValidator = [
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain uppercase, lowercase, and a number'),
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   body('confirmPassword')
     .notEmpty()
     .withMessage('Confirm password is required')

@@ -44,7 +44,7 @@ const MedicalReportsPage = () => {
       const response = await medicalReportService.getPatientReports({ 
         reportType: filter !== 'all' ? filter : undefined 
       });
-      setReports(response.data.reports);
+      setReports(response?.reports || []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to fetch reports');
     } finally {
@@ -356,7 +356,7 @@ const MedicalReportsPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredReports.map((report) => {
+            {(filteredReports || []).map((report) => {
               const FileIcon = getFileIcon(report.mimeType);
               return (
                 <div

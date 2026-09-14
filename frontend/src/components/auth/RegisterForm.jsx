@@ -21,11 +21,21 @@ const RegisterForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      const { dashboardRoute } = await registerUser(data);
+      // Ensure required fields are present
+      const registrationData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        phone: data.phone || undefined,
+      };
+
+      const { dashboardRoute } = await registerUser(registrationData);
       toast.success('Registration successful!');
       navigate(dashboardRoute);
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      const message = error.response?.data?.message || error.message || 'Registration failed. Please try again.';
       toast.error(message);
     }
   };

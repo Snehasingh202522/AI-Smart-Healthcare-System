@@ -20,7 +20,7 @@ const SymptomHistoryPage = () => {
     setLoading(true);
     try {
       const response = await aiService.getSymptomHistory();
-      setHistory(response.data.history);
+      setHistory(response?.history || []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to fetch symptom history');
     } finally {
@@ -118,7 +118,7 @@ const SymptomHistoryPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredHistory.map((analysis) => (
+            {(filteredHistory || []).map((analysis) => (
               <div
                 key={analysis._id}
                 className="flex flex-col gap-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between"
@@ -245,7 +245,7 @@ const SymptomHistoryPage = () => {
                     Existing Diseases
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedAnalysis.existingDiseases.map((disease, index) => (
+                    {(selectedAnalysis.existingDiseases || []).map((disease, index) => (
                       <Badge key={index} className="bg-gray-100 text-gray-800">
                         {disease}
                       </Badge>
@@ -260,7 +260,7 @@ const SymptomHistoryPage = () => {
                     Current Medications
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedAnalysis.currentMedications.map((medication, index) => (
+                    {(selectedAnalysis.currentMedications || []).map((medication, index) => (
                       <Badge key={index} className="bg-gray-100 text-gray-800">
                         {medication}
                       </Badge>
@@ -276,7 +276,7 @@ const SymptomHistoryPage = () => {
                       Possible Diseases
                     </h4>
                     <div className="space-y-2">
-                      {selectedAnalysis.aiAnalysis.possibleDiseases.map((disease, index) => (
+                      {(selectedAnalysis.aiAnalysis?.possibleDiseases || []).map((disease, index) => (
                         <div
                           key={index}
                           className="flex items-center justify-between rounded-lg border border-gray-200 p-2 dark:border-gray-700"

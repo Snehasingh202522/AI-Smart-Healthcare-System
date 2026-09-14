@@ -74,7 +74,7 @@ const updateAppointmentValidator = [
     .withMessage('Notes cannot exceed 1000 characters'),
   body('status')
     .optional()
-    .isIn(['scheduled', 'completed', 'cancelled', 'no-show'])
+    .isIn(['pending', 'confirmed', 'scheduled', 'completed', 'cancelled', 'no-show'])
     .withMessage('Invalid status value'),
   body('priority')
     .optional()
@@ -89,7 +89,7 @@ const updateStatusValidator = [
   body('status')
     .notEmpty()
     .withMessage('Status is required')
-    .isIn(['scheduled', 'completed', 'cancelled', 'no-show'])
+    .isIn(['pending', 'confirmed', 'scheduled', 'completed', 'cancelled', 'no-show'])
     .withMessage('Invalid status value'),
 ];
 

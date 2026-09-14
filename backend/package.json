@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed:doctors": "node src/scripts/seedDoctors.js"
+    "seed:doctors": "node src/scripts/seedDoctors.js",
+    "seed:demo": "node src/scripts/seedDemoAccounts.js"
   },
   "keywords": [
     "healthcare",
@@ -17,7 +18,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^2.17.0",
     "@google/generative-ai": "^0.24.1",
+    "axios": "^1.18.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",

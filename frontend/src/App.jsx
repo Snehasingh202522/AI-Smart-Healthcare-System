@@ -9,19 +9,38 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+
 import PatientDashboard from './pages/dashboards/PatientDashboard';
 import DoctorDashboard from './pages/dashboards/DoctorDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
+
 import ProfilePage from './pages/ProfilePage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import MedicalReportsPage from './pages/MedicalReportsPage';
 import SymptomCheckerPage from './pages/SymptomCheckerPage';
 import SymptomHistoryPage from './pages/SymptomHistoryPage';
 import FindDoctorsPage from './pages/FindDoctorsPage';
+import SmartDoctorRecommendationPage from './pages/SmartDoctorRecommendationPage';
+import PatientHealthInsightsPage from './pages/PatientHealthInsightsPage';
+import DoctorSchedulePage from './pages/DoctorSchedulePage';
+import DoctorPrescriptionPage from './pages/DoctorPrescriptionPage';
+import DoctorNotificationsPage from './pages/DoctorNotificationsPage';
+import DoctorAnalyticsPage from './pages/DoctorAnalyticsPage';
+import PatientHealthScorePage from './pages/PatientHealthScorePage';
+import PatientNotificationsPage from './pages/PatientNotificationsPage';
+import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
+
+import AdminDoctorVerificationPage from './pages/AdminDoctorVerificationPage';
+import AdminUserManagementPage from './pages/AdminUserManagementPage';
+import AdminAnalyticsPage from './pages/dashboards/AdminAnalyticsPage';
+import AdminNotificationsPage from './pages/dashboards/AdminNotificationsPage';
+import AdminSettingsPage from './pages/dashboards/AdminSettingsPage';
 
 function App() {
   return (
     <Routes>
+      {/* ==================== PUBLIC ROUTES ==================== */}
+
       <Route element={<MainLayout />}>
         <Route path="/" element={<LandingPage />} />
       </Route>
@@ -31,38 +50,177 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
+      {/* ==================== PATIENT ROUTES ==================== */}
+
       <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
         <Route
-          element={<DashboardLayout role="patient" title="Patient Dashboard" />}
+          element={
+            <DashboardLayout
+              role="patient"
+              title="Patient Dashboard"
+            />
+          }
         >
-          <Route path="/patient/dashboard" element={<PatientDashboard />} />
-          <Route path="/patient/appointments" element={<AppointmentsPage />} />
-          <Route path="/patient/medical-reports" element={<MedicalReportsPage />} />
-          <Route path="/patient/symptom-checker" element={<SymptomCheckerPage />} />
-          <Route path="/patient/symptom-history" element={<SymptomHistoryPage />} />
-          <Route path="/patient/find-doctors" element={<FindDoctorsPage />} />
-          <Route path="/patient/profile" element={<ProfilePage />} />
+          <Route
+            path="/patient/dashboard"
+            element={<PatientDashboard />}
+          />
+
+          <Route
+            path="/patient/appointments"
+            element={<AppointmentsPage />}
+          />
+
+          <Route
+            path="/patient/medical-reports"
+            element={<MedicalReportsPage />}
+          />
+
+          <Route
+            path="/patient/symptom-checker"
+            element={<SymptomCheckerPage />}
+          />
+
+          <Route
+            path="/patient/symptom-history"
+            element={<SymptomHistoryPage />}
+          />
+
+          <Route
+            path="/patient/find-doctors"
+            element={<FindDoctorsPage />}
+          />
+
+          <Route
+            path="/patient/smart-doctor-recommendation"
+            element={<SmartDoctorRecommendationPage />}
+          />
+
+          <Route
+            path="/patient/health-score"
+            element={<PatientHealthScorePage />}
+          />
+
+          <Route
+            path="/patient/notifications"
+            element={<PatientNotificationsPage />}
+          />
+
+          <Route
+            path="/patient/prescriptions"
+            element={<PatientPrescriptionsPage />}
+          />
+
+          <Route
+            path="/patient/profile"
+            element={<ProfilePage />}
+          />
+
+          <Route
+            path="/patient/health-insights"
+            element={<PatientHealthInsightsPage />}
+          />
         </Route>
       </Route>
+
+      {/* ==================== DOCTOR ROUTES ==================== */}
 
       <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
         <Route
-          element={<DashboardLayout role="doctor" title="Doctor Dashboard" />}
+          element={
+            <DashboardLayout
+              role="doctor"
+              title="Doctor Dashboard"
+            />
+          }
         >
-          <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+          <Route
+            path="/doctor/dashboard"
+            element={<DoctorDashboard />}
+          />
+
+          <Route
+            path="/doctor/schedule"
+            element={<DoctorSchedulePage />}
+          />
+
+          <Route
+            path="/doctor/prescriptions"
+            element={<DoctorPrescriptionPage />}
+          />
+
+          <Route
+            path="/doctor/notifications"
+            element={<DoctorNotificationsPage />}
+          />
+
+          <Route
+            path="/doctor/analytics"
+            element={<DoctorAnalyticsPage />}
+          />
         </Route>
       </Route>
+
+      {/* ==================== ADMIN ROUTES ==================== */}
 
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route
-          element={<DashboardLayout role="admin" title="Admin Dashboard" />}
+          element={
+            <DashboardLayout
+              role="admin"
+              title="Admin Dashboard"
+            />
+          }
         >
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          {/* Existing Admin Dashboard */}
+          <Route
+            path="/admin/dashboard"
+            element={<AdminDashboard />}
+          />
+
+          {/* Existing Doctor Verification */}
+          <Route
+            path="/admin/doctor-verification"
+            element={<AdminDoctorVerificationPage />}
+          />
+
+          {/* Existing User Management */}
+          <Route
+            path="/admin/user-management"
+            element={<AdminUserManagementPage />}
+          />
+
+          {/* New Admin Analytics */}
+          <Route
+            path="/admin/analytics"
+            element={<AdminAnalyticsPage />}
+          />
+
+          {/* New Admin Notifications */}
+          <Route
+            path="/admin/notifications"
+            element={<AdminNotificationsPage />}
+          />
+
+          {/* New Admin Settings */}
+          <Route
+            path="/admin/settings"
+            element={<AdminSettingsPage />}
+          />
         </Route>
       </Route>
 
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
-      <Route path="*" element={<NotFoundPage />} />
+      {/* ==================== OTHER ROUTES ==================== */}
+
+      <Route
+        path="/unauthorized"
+        element={<UnauthorizedPage />}
+      />
+
+      <Route
+        path="*"
+        element={<NotFoundPage />}
+      />
     </Routes>
   );
 }

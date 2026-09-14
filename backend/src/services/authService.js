@@ -46,7 +46,7 @@ const register = async (userData) => {
 
   return {
     user: {
-      id: user._id,
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -77,7 +77,7 @@ const login = async (email, password) => {
 
   return {
     user: {
-      id: user._id,
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -127,7 +127,7 @@ const resetPassword = async (token, password) => {
 
   return {
     user: {
-      id: user._id,
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
